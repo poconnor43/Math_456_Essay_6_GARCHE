@@ -1,0 +1,382 @@
+---
+title: "Essy_6_SP500"
+format: pdf
+editor: visual
+---
+
+# Implementing a GARCH Model on Apple Stock
+
+## Authors: Preston O'Connor
+
+### Date: 4/26/2025
+
+### Introduction
+
+```{r}
+# Libraries Used for the Data set
+# install.packages(c(
+#   "quantmod", 
+#   "lmtest", 
+#   "dplyr", 
+#   "PerformanceAnalytics", 
+#   "ggplot2", 
+#   "xts", 
+#   "tidyverse", 
+#   "feasts", 
+#   "fable", 
+#   "lubridate", 
+#   "gridExtra", 
+#   "tseries", 
+#   "forecast", 
+#   "rugarch"
+# ))
+#install
+library(quantmod)
+library(lmtest)
+library(dplyr)
+library(PerformanceAnalytics)
+library(ggplot2)
+library(xts)
+library(tidyverse)
+library("feasts")
+library("fable")
+library("lubridate")
+library("gridExtra")
+library(tseries)
+library(forecast)
+library(rugarch)
+
+# Fetching the Daa set of the Model /yahoo finance
+getSymbols("AAPL", src = "yahoo", from = "2019-01-01", to = "2024-12-31", periodicity = "daily")
+
+head(AAPL)
+```
+
+### Data Description
+
+-   open: Opening price of the Stock
+
+-   High: Highest price of the stock during the day
+
+-   low: Lowest price of the stock during the day
+
+-   close: Closing price of the stock (needed for the GARCH model)
+
+-   volume: Number of Shares traded
+
+#### Clean Stock Data
+
+```{r}
+colSums(is.na(AAPL))
+```
+
+#### Calculate Returns and Transform into Log values
+
+```{r}
+data <- cbind(Price = AAPL$AAPL.Close, Return=CalculateReturns(AAPL$AAPL.Close,
+method = 'log'))
+colnames(data) <- c('Price','Return')
+head(data)
+
+```
+
+-   We need to take the log returns because of the nature of stock prices being non-stationary, while returns are usually stationary, which is a requirement for GARCH modeling. Log returns also allow changes over time to be additive, making analysis and forecasting simpler; furthermore, log returns better capture volatility patterns and make percent changes much easier to interpret.
+
+-   above are the small day-to-day percentage changes in Apple's stock Price, shown in the log scale/
+
+    -   Positive number: price went up that day
+
+    -   Negative Number: Price went down that day
+
+#### AAPL Price over Time
+
+```{r}
+plot(na.omit(data$Price), ylab='AAPL Closing Price',main='AAPL
+Stock Price from 2019-2024',col='blue')
+
+```
+
+-   Overall, an Upward trend Which quintupled from \$40 to \$250 by the end of 2024
+
+-   Several noticeable dips in the stocks and large recoveries, particularly during 2022
+
+-   Accelerated gain period during 2023 to 2024, indicating bullish market activity
+
+#### AAPL Log Return
+
+```{r}
+plot(na.omit(data$Return),main='Return of AAPL')
+```
+
+-   High volatility in early 2020 (Covid-19 Market Shock), mid 2022 and slightly in 2024
+
+-   Our returns tend to cluster around the 0, but we can see there are frequent spikes above 5% and below -5% showcasing that the market is experiencing some turbulance
+
+#### ADF Stationary Test
+
+```{r}
+adf.test(na.omit(data$Price))
+adf.test(na.omit(data$Return))
+```
+
+-   Price series: The ADF test shows a high p-value (0.3273), meaning the price data is not stationary ; it has a trend or changing variance over time.
+
+-   Return series: The ADF test gives a very low statistic (–10.841), indicating the returns are stationary ; they fluctuate around a stable mean, making them suitable for modeling.
+
+### Analysis
+
+#### Train and Test Set Split (80/20)
+
+```{r}
+train_size <- floor(0.8 * nrow(na.omit(data)))
+train_data <- na.omit(data)[1:train_size,]
+test_data <- na.omit(data)[(train_size+1):nrow(na.omit(data)),]
+
+cat("Training set size:", nrow(train_data), "\n")
+cat("Test set size:", nrow(test_data), "\n")
+```
+
+-   unlike our typical models we take the first 80% of the data for training and try to see how well we can predict the last 20% of the data
+
+#### ACF/PACF plots
+
+```{r}
+
+acf(na.omit(train_data$Return), lag.max = 40, main='ACF of Return Values', col='red')
+pacf(na.omit(train_data$Return), main='Partial ACF of Return Values', col='red')
+```
+
+-   ACF of Returns
+
+    -   Our return series does not exhibit strong autocorrelation; this is typical for financial returns
+
+    -   Supports the idea that returns are weakly dependent over time
+
+    -   Volatility may still may be auto correlated, garch model may still be useful
+
+-   Partial ACF: how much each lag contributes to returns
+
+    -   most of our bars are staying within the blue lines; so, returns have very little direct dependency at specific lags (previous day returns)
+
+    -   a few small spikes, Lag 9, may hint at minor short term structure, but nothing we can leverage for a clear AR model
+
+#### Histogram and QQ plot
+
+```{r}
+ggplot(aes(Return), data=as.data.frame(train_data)) +
+  geom_histogram(bins=100, col='black', fill='red') +
+  ggtitle('Return of AAPL')
+
+ggplot(data=as.data.frame(train_data), aes(sample = Return)) +
+  stat_qq() +
+  stat_qq_line(col='red') +
+  ggtitle('QQ plot of AAPL Returns')
+```
+
+-   Histogram: Most of the returns are very close to 0, meaning small day-to-day changes are common(somewhat expected). There are fewer returns in the far left and right, showing rare but large losses or gains in the market. The shape is roughly bell-shaped but with a few outliers, suggesting a perfectly normal distribution
+
+-   QQ Plot: The points follow the red line in the middle fairly closely, so we have a fairly normal distribution in the center. The points bend away at the ends, showing fat tails, showcasing more extreme returns than a normal distribution would expect. this means our Apple stock has higher risk of big moves (for increase/decrease) than a normal model predicts
+
+#### Normality test
+
+```{r}
+jarque.bera.test(na.omit(train_data$Return))
+```
+
+-   An extremely small p-value, we reject normality
+
+    -   AAPL returns do not follow a normal distribution
+
+#### Box-Ljung test
+
+```{r}
+Box.test(na.omit(train_data$Return), type="Ljung-Box")
+```
+
+-   Due to the very small value, we reject the idea of no autocorrelation
+
+    -   AAPL shows signs of autocorrelation which is useful for the time series model
+
+### Model Evaluation and Prediction
+
+-   Implementing multiple Garche models into our set up. the reason for the multiple GARCHE models is to check for different orders that might better capture the dynamics of the mean returns, We can alo leverage some combinations model volatility clustering and also a mdel lets us compare for the best perfomance set up
+
+```{r}
+# Model 1: ARMA(0,0) - eGARCH(1,1) - Student t
+AAPL_garch_1 <- ugarchspec(
+  mean.model = list(armaOrder = c(0, 0)),
+  variance.model = list(model = "eGARCH", garchOrder = c(1, 1)),
+  distribution.model = "std"
+)
+fit_garch_1 <- ugarchfit(spec = AAPL_garch_1, data = na.omit(train_data$Return))
+fit_garch_1
+
+# Model 2: ARMA(1,1) - eGARCH(1,1) - Student t
+AAPL_garch_2 <- ugarchspec(
+  mean.model = list(armaOrder = c(1, 1)),
+  variance.model = list(model = "eGARCH", garchOrder = c(1, 1)),
+  distribution.model = "std"
+)
+fit_garch_2 <- ugarchfit(spec = AAPL_garch_2, data = na.omit(train_data$Return))
+fit_garch_2
+
+# Model 3: ARMA(2,2) - eGARCH(1,1) - Student t
+AAPL_garch_3 <- ugarchspec(
+  mean.model = list(armaOrder = c(2, 2)),
+  variance.model = list(model = "eGARCH", garchOrder = c(1, 1)),
+  distribution.model = "std"
+)
+fit_garch_3 <- ugarchfit(spec = AAPL_garch_3, data = na.omit(train_data$Return))
+fit_garch_3
+
+# Model 4: ARMA(1,2) - eGARCH(1,1) - Student t
+AAPL_garch_4 <- ugarchspec(
+  mean.model = list(armaOrder = c(1, 2)),
+  variance.model = list(model = "eGARCH", garchOrder = c(1, 1)),
+  distribution.model = "std"
+)
+fit_garch_4 <- ugarchfit(spec = AAPL_garch_4, data = na.omit(train_data$Return))
+fit_garch_4
+
+# Model 5: ARMA(2,1) - eGARCH(1,1) - Student t
+AAPL_garch_5 <- ugarchspec(
+  mean.model = list(armaOrder = c(2, 1)),
+  variance.model = list(model = "eGARCH", garchOrder = c(1, 1)),
+  distribution.model = "std"
+)
+fit_garch_5 <- ugarchfit(spec = AAPL_garch_5, data = na.omit(train_data$Return))
+fit_garch_5
+
+# Model 6: ARMA(3,1) - eGARCH(1,1) - Student t
+AAPL_garch_6 <- ugarchspec(
+  mean.model = list(armaOrder = c(3, 1)),
+  variance.model = list(model = "eGARCH", garchOrder = c(1, 1)),
+  distribution.model = "std"
+)
+fit_garch_6 <- ugarchfit(spec = AAPL_garch_6, data = na.omit(train_data$Return))
+fit_garch_6
+
+# Model 7: ARMA(3,2) - eGARCH(1,1) - Student t
+AAPL_garch_7 <- ugarchspec(
+  mean.model = list(armaOrder = c(3, 2)),
+  variance.model = list(model = "eGARCH", garchOrder = c(1, 1)),
+  distribution.model = "std"
+)
+fit_garch_7 <- ugarchfit(spec = AAPL_garch_7, data = na.omit(train_data$Return))
+fit_garch_7
+
+# Model 8: ARMA(1,3) - eGARCH(1,1) - Student t
+AAPL_garch_8 <- ugarchspec(
+  mean.model = list(armaOrder = c(1, 3)),
+  variance.model = list(model = "eGARCH", garchOrder = c(1, 1)),
+  distribution.model = "std"
+)
+fit_garch_8 <- ugarchfit(spec = AAPL_garch_8, data = na.omit(train_data$Return))
+fit_garch_8
+```
+
+#### AIC values 
+
+```{r}
+
+Model <- c('fit_garch_1', 'fit_garch_2', 'fit_garch_3', 'fit_garch_4',
+           'fit_garch_5', 'fit_garch_6', 'fit_garch_7', 'fit_garch_8')
+
+AIC_values <- c(
+  infocriteria(fit_garch_1)[1],
+  infocriteria(fit_garch_2)[1],
+  infocriteria(fit_garch_3)[1],
+  infocriteria(fit_garch_4)[1],
+  infocriteria(fit_garch_5)[1],
+  infocriteria(fit_garch_6)[1],
+  infocriteria(fit_garch_7)[1],
+  infocriteria(fit_garch_8)[1]
+)
+
+(model_table <- data.frame(Model, AIC_values))
+
+which.min(model_table$AIC_values)
+
+```
+
+-   chose fit_garch_4 as it is the smallest Return from the model
+
+    -   ARMA(1,2) Captures both short-term autoregressive behavior and moving average shocks in the return series. Also accounts for the fat tails with the Student-t errors
+
+```{r}
+print(convergence(fit_garch_4))
+```
+
+#### Forecast Future Returns
+
+```{r}
+for_cast1 <- ugarchforecast(fit_garch_4, data = data, n.ahead = 20)
+for_cast1
+
+# Rolling forecast - fix this line
+fit_roll <- ugarchfit(spec = AAPL_garch_4, data = na.omit(data$Return), out.sample = 500)
+
+# Generate rolling forecast
+fore_roll <- ugarchforecast(fit_roll, n.ahead = 20, n.roll = 50)
+fore_roll
+
+# Plot rolling forecast results
+par(mfrow = c(1, 2))
+plot(fore_roll, which = 1)  # Forecasted mean
+plot(fore_roll, which = 2)
+
+```
+
+-    The model converges well and was the best based on the AIC score
+
+-   It odoes a good job of modeling volatility in AAPL Returns
+
+-   The average return it predicts is close to zero, which is typical of the daily stock return
+
+-   Yellow band showcases that there is realistic ranges for future changes which is useful for checking our risk
+
+#### Forecasting
+
+```{r}
+par(mfrow=c(1,2))
+plot(fore_roll,which=3)
+plot(fore_roll,which=4)
+```
+
+-   The drop in our forcast (red line) starts high and slowly declines, meaning the model expects to have less movement in prices soon
+
+-   We see the previous volatility; Expects a calm period after the fluctuation
+
+-   Provides us insight on the future market predictions and risk levels for possible future investments
+
+#### Bootstrap Forecasting
+
+```{r}
+par(mfrow=c(1,2))
+fore_boot <- ugarchboot(fit_garch_4,data = na.omit(data$Return),
+method = c("Partial", "Full")[1], n.ahead = 20, n.bootpred = 500)
+plot(fore_boot,which=2)
+plot(fore_boot,which=3)
+```
+
+-   Left Plot: Forecasted Returns with Bootstrap Error Bands
+
+    -   Forecasted mean returns (red-line) shows the forecasted mean returns, which are close to zero, showcasing no strong expected trend
+
+    -   Uncertainty at different quantiles (dotted blue line) shows the returns could vary widely, even though we have a flat average
+
+    -   Range simulated outcomes(shaded grey outline) indicates the model captures random shocks and market noise
+
+-   Right Plot: Forecasted Volatility with Bootstrap Bands
+
+    -   Red line is the main forecast of future volatility and it shows a gradual linear increase, suggesting rising uncertainty
+
+    -   Blue dots and black line show bootstrap error bands showing a very wide spread, so the forecasted risk has anlot of variation especially post 10 day
+
+### Conclusion & Summary
+
+### References
+
+-   <https://finance.yahoo.com/quote/AAPL/history/>
+-   source 2
+-   source 3
