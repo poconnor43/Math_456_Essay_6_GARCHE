@@ -4,7 +4,7 @@ format: pdf
 editor: visual
 ---
 
-## Authors: Preston O'Connor, Khoa Dao, Matthew Jacob, Nick W, Anthony Y
+## Authors: Preston O'Connor, Anthony Yasan, Matthew Jacob, Khoa Dao, Nick Wierzbowski
 
 ### Date: 4/26/2025
 
