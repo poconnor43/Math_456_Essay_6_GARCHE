@@ -10,6 +10,12 @@ editor: visual
 
 ### Introduction
 
+Our time series model predicts volatility in Apple's stock price, and we specifically used a GARCH (generalized autoregressive conditional heteroskedasticity) model to do so. Our data is from Yahoo finance covering the time frame from the start of 2019 to the end of 2024, which obviously includes some pretty high volatility periods such as COVID.
+
+The packages used include quantmod for financial modelling, lmtest for diagnostics, dplyr for data manipulation, PerformanceAnalytics for more econometric tools, tidyverse for visualization, xts, feasts, fable, forecast and tseries for time series stuff, rugarch for GARCH models, lubridate for working with dates, and gridextra for visualization.
+
+Our model seems to predict the volatility fairly well despite the extenuating circumstances in the chosen time period.
+
 ```{r}
 # Libraries Used for the Data set
 # install.packages(c(
@@ -114,7 +120,7 @@ plot(na.omit(data$Return),main='Return of AAPL')
 
 -   High volatility in early 2020 (Covid-19 Market Shock), mid 2022 and slightly in 2024
 
--   Our returns tend to cluster around the 0, but we can see there are frequent spikes above 5% and below -5% showcasing that the market is experiencing some turbulance
+-   Our returns tend to cluster around the 0, but we can see there are frequent spikes above 5% and below -5% showcasing that the market is experiencing some turbulence
 
 #### ADF Stationary Test
 
@@ -203,7 +209,7 @@ Box.test(na.omit(train_data$Return), type="Ljung-Box")
 
 ### Model Evaluation and Prediction
 
--   Implementing multiple Garche models into our set up. the reason for the multiple GARCHE models is to check for different orders that might better capture the dynamics of the mean returns, We can alo leverage some combinations model volatility clustering and also a mdel lets us compare for the best perfomance set up
+-   Implementing multiple Garche models into our set up. the reason for the multiple GARCHE models is to check for different orders that might better capture the dynamics of the mean returns, We can also leverage some combinations model volatility clustering and also a mdel lets us compare for the best performance set up
 
 ```{r}
 # Model 1: ARMA(0,0) - eGARCH(1,1) - Student t
@@ -279,7 +285,7 @@ fit_garch_8 <- ugarchfit(spec = AAPL_garch_8, data = na.omit(train_data$Return))
 fit_garch_8
 ```
 
-#### AIC values 
+#### AIC values
 
 ```{r}
 
@@ -331,9 +337,9 @@ plot(fore_roll, which = 2)
 
 ```
 
--    The model converges well and was the best based on the AIC score
+-   The model converges well and was the best based on the AIC score
 
--   It odoes a good job of modeling volatility in AAPL Returns
+-   It does a good job of modeling volatility in AAPL Returns
 
 -   The average return it predicts is close to zero, which is typical of the daily stock return
 
@@ -347,7 +353,7 @@ plot(fore_roll,which=3)
 plot(fore_roll,which=4)
 ```
 
--   The drop in our forcast (red line) starts high and slowly declines, meaning the model expects to have less movement in prices soon
+-   The drop in our forecast (red line) starts high and slowly declines, meaning the model expects to have less movement in prices soon
 
 -   We see the previous volatility; Expects a calm period after the fluctuation
 
@@ -375,9 +381,10 @@ plot(fore_boot,which=3)
 
     -   Red line is the main forecast of future volatility and it shows a gradual linear increase, suggesting rising uncertainty
 
-    -   Blue dots and black line show bootstrap error bands showing a very wide spread, so the forecasted risk has anlot of variation especially post 10 day
+    -   Blue dots and black line show bootstrap error bands showing a very wide spread, so the forecasted risk has a lot of variation especially post 10 day
 
 ### Conclusion & Summary
+
 In this project, we used various GARCH models with different ARMA configurations to model and forecast the daily return volatility of Apple Inc. (AAPL) stock, using data from 2019 to 2024 from Yahoo Finance. After initial data wrangling and processing, we split the dataset into an 80:20 training-to-test ratio. We implemented eight candidate models, all assuming a Student-t distribution to capture the fat-tailed nature of returns. After evaluating their performance using AIC values, the ARMA(1,2)-eGARCH(1,1) model 4 emerged as the best. That model generally did a good job with modeling volatility in stock returns, and it showed some promise as a meaningful predictive model. Overall, our final model was able to capture some of the expected variations of financial returns, and it produced realistic forecasts of future volatility. Nonetheless, the model could be further improved by incorporating other variables to account for industry, market and greater economic changes.
 
 ### References
