@@ -378,6 +378,7 @@ plot(fore_boot,which=3)
     -   Blue dots and black line show bootstrap error bands showing a very wide spread, so the forecasted risk has anlot of variation especially post 10 day
 
 ### Conclusion & Summary
+In this project, we used various GARCH models with different ARMA configurations to model and forecast the daily return volatility of Apple Inc. (AAPL) stock, using data from 2019 to 2024 from Yahoo Finance. After initial data wrangling and processing, we split the dataset into an 80:20 training-to-test ratio. We implemented eight candidate models, all assuming a Student-t distribution to capture the fat-tailed nature of returns. After evaluating their performance using AIC values, the ARMA(1,2)-eGARCH(1,1) model 4 emerged as the best. That model generally did a good job with modeling volatility in stock returns, and it showed some promise as a meaningful predictive model. Overall, our final model was able to capture some of the expected variations of financial returns, and it produced realistic forecasts of future volatility. Nonetheless, the model could be further improved by incorporating other variables to account for industry, market and greater economic changes.
 
 ### References
 
