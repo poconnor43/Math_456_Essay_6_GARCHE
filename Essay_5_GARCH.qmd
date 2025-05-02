@@ -1,12 +1,10 @@
 ---
-title: "Essy_6_SP500"
+title: "Implementing a GARCH Model on Apple Stock"
 format: pdf
 editor: visual
 ---
 
-# Implementing a GARCH Model on Apple Stock
-
-## Authors: Preston O'Connor, Khoa Dao
+## Authors: Preston O'Connor, Khoa Dao, Matthew Jacob, Nick W, Anthony Y
 
 ### Date: 4/26/2025
 
@@ -384,5 +382,5 @@ plot(fore_boot,which=3)
 ### References
 
 -   <https://finance.yahoo.com/quote/AAPL/history/>
--   source 2
--   source 3
+-   https://rpubs.com/Mahmud_Hasan/778532
+-   https://iopscience.iop.org/article/10.1088/1757-899X/548/1/012023/pdf
