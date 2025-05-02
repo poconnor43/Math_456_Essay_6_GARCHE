@@ -64,6 +64,8 @@ head(AAPL)
 
 -   volume: Number of Shares traded
 
+-   Adjusted: Stock's closing price corrected for dividends, splits, and other corporate actions to reflect true value over time
+
 #### Clean Stock Data
 
 ```{r}
