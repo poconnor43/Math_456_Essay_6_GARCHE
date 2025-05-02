@@ -54,6 +54,10 @@ head(AAPL)
 
 ### Data Description
 
+#### Data Source
+
+The stock data for Apple Inc. (AAPL) used in this analysis was obtained from Yahoo Finance. The dataset includes daily trading information from January 1, 2019 to December 31, 2024. Key variables include the opening price, high and low prices of the day, closing price, trading volume, and adjusted closing price. This information was accessed using the `getSymbols()` function from the `quantmod` package in R, allowing for efficient retrieval and preprocessing of financial time series data.
+
 -   open: Opening price of the Stock
 
 -   High: Highest price of the stock during the day
