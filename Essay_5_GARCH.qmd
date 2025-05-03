@@ -10,9 +10,9 @@ editor: visual
 
 ### Introduction
 
-Our time series model predicts volatility in Apple's stock price, and we specifically used a GARCH (generalized autoregressive conditional heteroskedasticity) model to do so. Our data is from Yahoo finance covering the time frame from the start of 2019 to the end of 2024, which obviously includes some pretty high volatility periods such as COVID.
+Our time series model predicts volatility in Apple's stock price, and we specifically used a GARCH (generalized autoregressive conditional heteroskedasticity) model to do so. Our data is from Yahoo finance covering the time frame from the start of 2019 to the end of 2024, which obviously includes some pretty high volatility periods such as COVID 19 and the 2022 Bull Market.
 
-The packages used include quantmod for financial modelling, lmtest for diagnostics, dplyr for data manipulation, PerformanceAnalytics for more econometric tools, tidyverse for visualization, xts, feasts, fable, forecast and tseries for time series stuff, rugarch for GARCH models, lubridate for working with dates, and gridextra for visualization.
+The packages used include quantmod for financial modelling, lmtest for diagnostics, dplyr for data manipulation, PerformanceAnalytics for more econometric tools, tidyverse for visualization, xts, feasts, fable, forecast and tseries for time series based calculations, rugarch for GARCH models, lubridate for working with dates, and gridextra for visualization.
 
 Our model seems to predict the volatility fairly well despite the extenuating circumstances in the chosen time period.
 
