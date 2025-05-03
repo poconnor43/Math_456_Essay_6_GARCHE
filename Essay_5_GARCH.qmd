@@ -2,11 +2,14 @@
 title: "Implementing a GARCH Model on Apple Stock"
 format: pdf
 editor: visual
+header-includes:
+  \usepackage{fvextra}
+  \DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,commandchars=\\\{\}}
 ---
 
 ## Authors: Preston O'Connor, Anthony Yasan, Matthew Jacob, Khoa Dao, Nick Wierzbowski
 
-### Date: 4/26/2025
+### Date: 5/2/2025
 
 ### Introduction
 
@@ -16,7 +19,7 @@ The packages used include quantmod for financial modelling, lmtest for diagnosti
 
 Our model seems to predict the volatility fairly well despite the extenuating circumstances in the chosen time period.
 
-```{r}
+```{r include=FALSE}
 # Libraries Used for the Data set
 # install.packages(c(
 #   "quantmod", 
